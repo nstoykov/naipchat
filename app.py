@@ -486,10 +486,24 @@ def generate_print_report(ortho_img, messages, pin_lat, pin_lon, buf_key, model_
 </html>"""
 
 # ─────────────────────────────────────────────────────────────────────
-# LLM
+# LLM — чете от secrets.toml (локално) или env vars (Docker)
 # ─────────────────────────────────────────────────────────────────────
-anthropic_client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-MODEL = st.secrets.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+import os
+def get_secret(key: str, default: str = "") -> str:
+    """Чете от st.secrets (локално) или os.environ (Docker)."""
+    try:
+        return st.secrets[key]
+    except Exception:
+        return os.environ.get(key, default)
+
+ANTHROPIC_API_KEY = get_secret("ANTHROPIC_API_KEY")
+MODEL = get_secret("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+
+if not ANTHROPIC_API_KEY:
+    st.error("❌ Липсва ANTHROPIC_API_KEY. Добави го в .streamlit/secrets.toml или като environment variable.")
+    st.stop()
+
+anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # ─────────────────────────────────────────────────────────────────────
 # SESSION STATE
