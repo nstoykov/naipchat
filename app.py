@@ -510,7 +510,7 @@ anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 # ─────────────────────────────────────────────────────────────────────
 for key, val in [("messages",[]),("ortho_img",None),("ortho_b64",None),
                   ("pin_lat",None),("pin_lon",None),("map_center",[DEFAULT_LAT,DEFAULT_LON]),
-                  ("map_zoom",DEFAULT_ZOOM),("buf_key","440м"),("theme_name","🌑 Тъмна")]:
+                  ("map_zoom",DEFAULT_ZOOM),("buf_key","220м"),("theme_name","☀️ Светла")]:
     if key not in st.session_state:
         st.session_state[key] = val
 
