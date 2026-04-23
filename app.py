@@ -270,11 +270,12 @@ with col_chat:
                 box = st.empty()
                 full = ""
                 try:
-                    stream = client.chat.completions.create(model=MODEL, messages=openai_messages, stream=True)
-                    for chunk in stream:
-                        delta = chunk.choices[0].delta.content or ""
-                        full += delta
-                        box.markdown(full + "▌")
+                    response = client.chat.completions.create(
+                        model=MODEL,
+                        messages=openai_messages,
+                        stream=False,
+                    )
+                    full = response.choices[0].message.content or ""
                     box.markdown(full)
                 except Exception as e:
                     st.error(f"Грешка на модела: {e}")
