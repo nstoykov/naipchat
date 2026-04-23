@@ -689,6 +689,13 @@ with col_ortho:
 with col_chat:
     st.markdown('<div class="geo-card-header">💬 ГЕОПРОСТРАНСТВЕН АНАЛИЗ</div>', unsafe_allow_html=True)
 
+    # 1. ПОЛЕ ЗА ВЪПРОСИ — най-отгоре
+    prompt = st.chat_input(
+        "Задайте въпрос за анализ..." if has_ortho else "Първо заредете ортофото...",
+        disabled=not has_ortho,
+    )
+
+    # Статус лента
     dot_c = "waiting" if not has_ortho else "ready"
     status_txt = ("Изчакване на ортофото..." if not has_ortho
                   else f"{'Готов' if not has_chat else str(len(st.session_state.messages)//2)+' въпроса'} · {MODEL.split('-')[1].upper()}")
@@ -696,8 +703,8 @@ with col_chat:
         <div class="status-dot {dot_c}"></div><span>{status_txt}</span>
     </div>""", unsafe_allow_html=True)
 
-    # Чат история
-    chat_area = st.container(height=320)
+    # 2. ГЕОПРОСТРАНСТВЕН АНАЛИЗ — история на чата
+    chat_area = st.container(height=340)
     with chat_area:
         if not st.session_state.messages:
             icon = "🔬" if has_ortho else "🗺️"
@@ -715,13 +722,18 @@ with col_chat:
                     <div class="chat-role {msg['role']}">{role_lbl}</div>
                     {display_text}
                 </div>""", unsafe_allow_html=True)
-                # Диаграма ако има chart данни
                 if msg["role"] == "assistant":
                     chart_data = parse_chart_data(msg["content"])
                     if chart_data:
                         render_chart(chart_data, st.session_state.theme_name)
 
-    # Примерни въпроси
+    # 3. ИЗЧИСТИ ЧАТА
+    if has_chat:
+        if st.button("🗑️ Изчисти чата", use_container_width=True):
+            st.session_state.messages = []
+            st.rerun()
+
+    # 4. ПРИМЕРНИ ВЪПРОСИ — най-отдолу
     if has_ortho:
         with st.expander("💡 Примерни въпроси", expanded=not has_chat):
             c1, c2 = st.columns(2)
@@ -730,17 +742,7 @@ with col_chat:
                     st.session_state._quick = q
                     st.rerun()
 
-    # Бутон изчисти
-    if has_chat:
-        if st.button("🗑️ Изчисти чата", use_container_width=True):
-            st.session_state.messages = []
-            st.rerun()
-
     # Чат вход
-    prompt = st.chat_input(
-        "Задайте въпрос за анализ..." if has_ortho else "Първо заредете ортофото...",
-        disabled=not has_ortho,
-    )
     if hasattr(st.session_state, "_quick"):
         prompt = st.session_state._quick
         del st.session_state._quick
