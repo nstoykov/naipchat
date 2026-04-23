@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw
 import streamlit as st
 from streamlit_folium import st_folium
 import folium
-from openai import OpenAI
+from openai import OpenAI  # запазен за бъдеща употреба
 
 # ─────────────────────────────────────────────
 # Конфигурация
@@ -28,13 +28,11 @@ BUFFER_OPTIONS = {
 }
 
 # ─────────────────────────────────────────────
-# LLM клиент
+# LLM клиент — Anthropic
 # ─────────────────────────────────────────────
-client = OpenAI(
-    base_url=f"{st.secrets['OLLAMA_HOST']}/v1",
-    api_key=st.secrets["OLLAMA_API_KEY"]
-)
-MODEL = st.secrets["OLLAMA_MODEL"]
+import anthropic
+anthropic_client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+MODEL = st.secrets.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
 # ─────────────────────────────────────────────
 # TMS функции
@@ -270,12 +268,37 @@ with col_chat:
                 box = st.empty()
                 full = ""
                 try:
-                    response = client.chat.completions.create(
+                    # Извличаме системния промпт и съобщенията
+                    anthropic_msgs = []
+                    for msg in openai_messages:
+                        if msg["role"] == "system":
+                            continue
+                        if isinstance(msg["content"], list):
+                            parts = []
+                            for part in msg["content"]:
+                                if part["type"] == "text":
+                                    parts.append({"type": "text", "text": part["text"]})
+                                elif part["type"] == "image_url":
+                                    b64data = part["image_url"]["url"].split(",")[1]
+                                    parts.append({
+                                        "type": "image",
+                                        "source": {
+                                            "type": "base64",
+                                            "media_type": "image/png",
+                                            "data": b64data,
+                                        }
+                                    })
+                            anthropic_msgs.append({"role": "user", "content": parts})
+                        else:
+                            anthropic_msgs.append({"role": msg["role"], "content": msg["content"]})
+
+                    response = anthropic_client.messages.create(
                         model=MODEL,
-                        messages=openai_messages,
-                        stream=False,
+                        max_tokens=2048,
+                        system=system_prompt,
+                        messages=anthropic_msgs,
                     )
-                    full = response.choices[0].message.content or ""
+                    full = response.content[0].text
                     box.markdown(full)
                 except Exception as e:
                     st.error(f"Грешка на модела: {e}")
