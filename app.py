@@ -208,6 +208,27 @@ div[data-testid="stRadio"] label div {{
     font-weight:600 !important;
 }}
 
+/* ── Text input (въпрос) — ФИКСИРАНО ── */
+div[data-testid="stTextInput"] input {{
+    background:var(--input-bg) !important;
+    color:var(--input-text) !important;
+    border:1px solid var(--border) !important;
+    border-radius:8px !important;
+    font-family:'Syne',sans-serif !important;
+    font-size:14px !important;
+    padding:10px 14px !important;
+    caret-color:var(--accent) !important;
+}}
+div[data-testid="stTextInput"] input::placeholder {{
+    color:var(--input-placeholder) !important;
+    opacity:1 !important;
+}}
+div[data-testid="stTextInput"] input:focus {{
+    border-color:var(--accent) !important;
+    box-shadow:0 0 0 2px var(--accent-glow) !important;
+    outline:none !important;
+}}
+
 /* ── Chat input — ФИКСИРАНО ── */
 div[data-testid="stChatInput"] textarea {{
     background:var(--input-bg) !important;
@@ -689,12 +710,6 @@ with col_ortho:
 with col_chat:
     st.markdown('<div class="geo-card-header">💬 ГЕОПРОСТРАНСТВЕН АНАЛИЗ</div>', unsafe_allow_html=True)
 
-    # 1. ПОЛЕ ЗА ВЪПРОСИ — най-отгоре
-    prompt = st.chat_input(
-        "Задайте въпрос за анализ..." if has_ortho else "Първо заредете ортофото...",
-        disabled=not has_ortho,
-    )
-
     # Статус лента
     dot_c = "waiting" if not has_ortho else "ready"
     status_txt = ("Изчакване на ортофото..." if not has_ortho
@@ -703,12 +718,33 @@ with col_chat:
         <div class="status-dot {dot_c}"></div><span>{status_txt}</span>
     </div>""", unsafe_allow_html=True)
 
+    # 1. ПОЛЕ ЗА ВЪПРОСИ — най-отгоре
+    inp_col, btn_col = st.columns([5, 1])
+    with inp_col:
+        user_input = st.text_input(
+            label="въпрос",
+            placeholder="Задайте въпрос за анализ..." if has_ortho else "Първо заредете ортофото...",
+            disabled=not has_ortho,
+            label_visibility="collapsed",
+            key="chat_input_field",
+        )
+    with btn_col:
+        send_clicked = st.button("➤", disabled=not has_ortho, use_container_width=True, key="send_btn")
+
+    prompt = None
+    if send_clicked and user_input.strip():
+        prompt = user_input.strip()
+
+    if hasattr(st.session_state, "_quick"):
+        prompt = st.session_state._quick
+        del st.session_state._quick
+
     # 2. ГЕОПРОСТРАНСТВЕН АНАЛИЗ — история на чата
-    chat_area = st.container(height=340)
+    chat_area = st.container(height=300)
     with chat_area:
         if not st.session_state.messages:
             icon = "🔬" if has_ortho else "🗺️"
-            txt  = "Ортофотото е заредено.<br>Задайте въпрос за анализ." if has_ortho else "Изберете зона и заредете<br>ортофото за начало."
+            txt  = "Ортофотото е заредено.<br>Задайте въпрос по-горе." if has_ortho else "Изберете зона и заредете<br>ортофото за начало."
             st.markdown(f"""<div style="text-align:center;padding:30px 20px;color:var(--text-muted);">
                 <div style="font-size:28px;margin-bottom:8px;">{icon}</div>
                 <div style="font-size:13px;">{txt}</div>
@@ -741,11 +777,6 @@ with col_chat:
                 if (c1 if i % 2 == 0 else c2).button(q, key=f"ex_{i}", use_container_width=True):
                     st.session_state._quick = q
                     st.rerun()
-
-    # Чат вход
-    if hasattr(st.session_state, "_quick"):
-        prompt = st.session_state._quick
-        del st.session_state._quick
 
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
