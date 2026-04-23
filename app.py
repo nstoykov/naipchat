@@ -14,7 +14,7 @@ st.set_page_config(page_title="БГ Гео Анализатор", page_icon="�
 DEFAULT_LAT, DEFAULT_LON, DEFAULT_ZOOM = 42.8742, 25.3187, 14
 MAF_URL         = "https://bg-imagery.openstreetmap.org/layer/maf-orthophoto-latest/{z}/{x}/{y}.png"
 MAF_ATTRIBUTION = "© МЗХ България"
-BUFFER_OPTIONS  = {"220м": 0.002, "440м": 0.004, "880м": 0.008}
+BUFFER_OPTIONS  = {"110м": 0.001, "220м": 0.002, "440м": 0.004, "880м": 0.008}
 EXAMPLE_QUESTIONS = [
     "🌿 Какъв е доминиращият тип земно покритие?",
     "🛣️ Опиши видимата пътна мрежа.",
@@ -183,20 +183,29 @@ header[data-testid="stHeader"] {{ background: transparent !important; border-bot
 
 /* ── Radio buttons — ФИКСИРАНО ── */
 div[data-testid="stRadio"] > div {{
-    display:flex !important; flex-direction:row !important; gap:8px !important;
+    display:flex !important; flex-direction:row !important; gap:8px !important; flex-wrap:wrap !important;
 }}
 div[data-testid="stRadio"] label {{
     background:var(--radio-bg) !important; border:1px solid var(--border) !important;
-    border-radius:8px !important; padding:8px 16px !important;
+    border-radius:8px !important; padding:8px 14px !important;
     cursor:pointer !important; transition:all 0.2s !important;
     color:var(--radio-text) !important; font-size:13px !important;
-    font-weight:600 !important;
+    font-weight:600 !important; display:inline-flex !important;
+    align-items:center !important; gap:6px !important;
 }}
 div[data-testid="stRadio"] label:hover {{
     border-color:var(--accent) !important; color:var(--accent) !important;
+    background:var(--accent-glow) !important;
 }}
-div[data-testid="stRadio"] label[data-baseweb="radio"] span {{
+div[data-testid="stRadio"] label > div {{
+    display:none !important;
+}}
+div[data-testid="stRadio"] label p,
+div[data-testid="stRadio"] label span,
+div[data-testid="stRadio"] label div {{
     color:var(--radio-text) !important;
+    font-size:13px !important;
+    font-weight:600 !important;
 }}
 
 /* ── Chat input — ФИКСИРАНО ── */
@@ -262,7 +271,7 @@ def tile_to_lat_lon(x, y, zoom):
     lon = x / n * 360 - 180
     return math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n)))), lon
 
-def fetch_maf_tiles(lat, lon, buf, zoom=17):
+def fetch_maf_tiles(lat, lon, buf, zoom=18):
     min_lon, max_lon = lon - buf, lon + buf
     min_lat, max_lat = lat - buf, lat + buf
     x_min, y_max = lat_lon_to_tile(min_lat, min_lon, zoom)
