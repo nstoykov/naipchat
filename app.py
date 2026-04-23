@@ -5,6 +5,9 @@ import streamlit as st
 from streamlit_folium import st_folium
 import folium
 import anthropic
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 # ─────────────────────────────────────────────
 # Конфигурация
@@ -336,55 +339,91 @@ def clean_text(text: str) -> str:
     return re.sub(r'CHART_DATA:\{.*?\}', '', text, flags=re.DOTALL).strip()
 
 def render_chart(chart_data: dict, theme_name: str):
-    """Рендерира диаграма с plotly или fallback с st.bar_chart."""
+    """Рендерира диаграма в Streamlit UI чрез matplotlib."""
     try:
-        import plotly.graph_objects as go
-        is_dark = "Тъмна" in theme_name
-        bg      = "#151d28" if is_dark else "#ffffff"
-        text_c  = "#e8edf5" if is_dark else "#1a2332"
-        colors  = ["#00d4aa","#0077ff","#ffa502","#ff4757","#a29bfe","#fd79a8","#55efc4"]
-        fig = go.Figure(go.Pie(
-            labels=chart_data["labels"],
-            values=chart_data["values"],
-            hole=0.4,
-            marker_colors=colors[:len(chart_data["values"])],
-            textfont=dict(size=12, color=text_c),
-        ))
-        fig.update_layout(
-            title=dict(text=chart_data.get("title",""), font=dict(color=text_c, size=14)),
-            paper_bgcolor=bg, plot_bgcolor=bg,
-            legend=dict(font=dict(color=text_c, size=11)),
-            margin=dict(t=50, b=20, l=20, r=20),
-            height=280,
+        is_dark  = "Тъмна" in theme_name
+        bg       = "#151d28" if is_dark else "#ffffff"
+        text_c   = "#e8edf5" if is_dark else "#1a2332"
+        legend_c = "#7a8fa8" if is_dark else "#4a5a6e"
+        colors   = ["#00d4aa","#0077cc","#ffa502","#ff4757","#a29bfe","#fd79a8","#55efc4"]
+        labels   = chart_data["labels"]
+        values   = chart_data["values"]
+        title    = chart_data.get("title","")
+
+        fig, ax = plt.subplots(figsize=(5, 3.2), facecolor=bg)
+        fig.patch.set_facecolor(bg)
+        ax.set_facecolor(bg)
+        wedges, texts, autotexts = ax.pie(
+            values,
+            labels=None,
+            autopct="%1.0f%%",
+            colors=colors[:len(values)],
+            startangle=90,
+            wedgeprops=dict(width=0.6, edgecolor=bg, linewidth=2),
+            pctdistance=0.75,
         )
-        st.plotly_chart(fig, use_container_width=True)
-    except ImportError:
-        import pandas as pd
-        df = pd.DataFrame({"Стойност": chart_data["values"]}, index=chart_data["labels"])
-        st.bar_chart(df)
+        for t in autotexts:
+            t.set_fontsize(10)
+            t.set_color("white")
+            t.set_fontweight("bold")
+        legend = ax.legend(
+            wedges, labels,
+            loc="center left",
+            bbox_to_anchor=(1, 0, 0.5, 1),
+            fontsize=9,
+            frameon=False,
+        )
+        for ltext in legend.get_texts():
+            ltext.set_color(legend_c)
+        ax.set_title(title, fontsize=11, fontweight="bold", color=text_c, pad=8)
+        plt.tight_layout()
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", dpi=130, bbox_inches="tight", facecolor=bg)
+        plt.close(fig)
+        buf.seek(0)
+        st.image(buf, use_container_width=True)
+    except Exception as e:
+        st.caption(f"Диаграма недостъпна: {e}")
 
 def chart_to_png_b64(chart_data: dict) -> str:
-    """Конвертира chart_data в base64 PNG за вграждане в HTML."""
+    """Конвертира chart_data в base64 PNG чрез matplotlib (без Chrome/kaleido)."""
     try:
-        import plotly.graph_objects as go
         colors = ["#0077cc","#00b894","#fdcb6e","#e17055","#a29bfe","#fd79a8","#55efc4"]
-        fig = go.Figure(go.Pie(
-            labels=chart_data["labels"],
-            values=chart_data["values"],
-            hole=0.4,
-            marker_colors=colors[:len(chart_data["values"])],
-            textfont=dict(size=13, color="#1a2332"),
-        ))
-        fig.update_layout(
-            title=dict(text=chart_data.get("title",""), font=dict(color="#1a2332", size=15)),
-            paper_bgcolor="white", plot_bgcolor="white",
-            legend=dict(font=dict(color="#1a2332", size=12)),
-            margin=dict(t=60, b=20, l=20, r=20),
-            height=320, width=480,
+        labels = chart_data["labels"]
+        values = chart_data["values"]
+        title  = chart_data.get("title", "")
+
+        fig, ax = plt.subplots(figsize=(5, 3.5), facecolor="white")
+        wedges, texts, autotexts = ax.pie(
+            values,
+            labels=None,
+            autopct="%1.0f%%",
+            colors=colors[:len(values)],
+            startangle=90,
+            wedgeprops=dict(width=0.6, edgecolor="white", linewidth=2),
+            pctdistance=0.75,
         )
-        png_bytes = fig.to_image(format="png", scale=2)
-        return base64.b64encode(png_bytes).decode()
-    except Exception:
+        for t in autotexts:
+            t.set_fontsize(10)
+            t.set_color("white")
+            t.set_fontweight("bold")
+        ax.legend(
+            wedges, labels,
+            loc="center left",
+            bbox_to_anchor=(1, 0, 0.5, 1),
+            fontsize=9,
+            frameon=False,
+        )
+        ax.set_title(title, fontsize=12, fontweight="bold", color="#1a2332", pad=10)
+        plt.tight_layout()
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="white")
+        plt.close(fig)
+        buf.seek(0)
+        return base64.b64encode(buf.read()).decode()
+    except Exception as e:
         return ""
 
 def generate_print_report(ortho_img, messages, pin_lat, pin_lon, buf_key, model_name):
