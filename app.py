@@ -698,16 +698,21 @@ with col_ortho:
                     st.session_state.pin_lat, st.session_state.pin_lon,
                     buf_key, MODEL
                 )
-                b64_html = base64.b64encode(html_report.encode()).decode()
-                st.markdown(f"""
-                <a href="data:text/html;base64,{b64_html}"
-                   target="_blank"
-                   style="display:block;text-align:center;padding:10px;
-                          background:var(--accent);color:var(--bg-primary);
-                          border-radius:8px;font-weight:700;font-size:13px;
-                          text-decoration:none;margin-top:8px;">
-                    🖨️ Отвори отчет в нов прозорец
-                </a>""", unsafe_allow_html=True)
+                st.session_state.report_html = html_report
+
+            if "report_html" in st.session_state and st.session_state.report_html:
+                st.download_button(
+                    label="⬇️ Изтегли отчет (HTML)",
+                    data=st.session_state.report_html.encode("utf-8"),
+                    file_name=f"geo_analiz_{st.session_state.pin_lat:.4f}_{st.session_state.pin_lon:.4f}.html",
+                    mime="text/html",
+                    use_container_width=True,
+                )
+                st.markdown("""
+                <div style="text-align:center;font-size:11px;color:var(--text-muted);
+                     font-family:monospace;margin-top:6px;">
+                    Изтегли → отвори файла в браузъра → Ctrl+P за печат
+                </div>""", unsafe_allow_html=True)
         else:
             st.markdown("""<div style="text-align:center;padding:10px;color:var(--text-muted);
                 font-size:12px;font-family:monospace;">Задайте въпроси за да генерирате отчет</div>""",
