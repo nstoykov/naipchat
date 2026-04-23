@@ -181,31 +181,21 @@ header[data-testid="stHeader"] {{ background: transparent !important; border-bot
     transform:none !important; box-shadow:none !important;
 }}
 
-/* ── Radio buttons — ФИКСИРАНО ── */
-div[data-testid="stRadio"] > div {{
-    display:flex !important; flex-direction:row !important; gap:8px !important; flex-wrap:wrap !important;
-}}
-div[data-testid="stRadio"] label {{
-    background:var(--radio-bg) !important; border:1px solid var(--border) !important;
-    border-radius:8px !important; padding:8px 14px !important;
-    cursor:pointer !important; transition:all 0.2s !important;
-    color:var(--radio-text) !important; font-size:13px !important;
-    font-weight:600 !important; display:inline-flex !important;
-    align-items:center !important; gap:6px !important;
-}}
-div[data-testid="stRadio"] label:hover {{
-    border-color:var(--accent) !important; color:var(--accent) !important;
-    background:var(--accent-glow) !important;
-}}
-div[data-testid="stRadio"] label > div {{
-    display:none !important;
-}}
-div[data-testid="stRadio"] label p,
-div[data-testid="stRadio"] label span,
-div[data-testid="stRadio"] label div {{
-    color:var(--radio-text) !important;
+/* ── Secondary бутони (буфери, теми) ── */
+button[kind="secondary"] {{
+    background:var(--bg-secondary) !important;
+    color:var(--text-primary) !important;
+    border:1px solid var(--border) !important;
     font-size:13px !important;
     font-weight:600 !important;
+    padding:8px 12px !important;
+    border-radius:8px !important;
+    transition:all 0.2s !important;
+}}
+button[kind="secondary"]:hover {{
+    border-color:var(--accent) !important;
+    color:var(--accent) !important;
+    background:var(--accent-glow) !important;
 }}
 
 /* ── Text input (въпрос) — ФИКСИРАНО ── */
@@ -542,12 +532,15 @@ with hdr_col1:
         </div>
     </div>""", unsafe_allow_html=True)
 with hdr_col2:
-    theme_choice = st.radio("Тема:", list(THEMES.keys()), horizontal=True,
-                            index=list(THEMES.keys()).index(st.session_state.theme_name),
-                            label_visibility="collapsed")
-    if theme_choice != st.session_state.theme_name:
-        st.session_state.theme_name = theme_choice
-        st.rerun()
+    t_cols = st.columns(len(THEMES))
+    for ti, tname in enumerate(THEMES.keys()):
+        is_active = st.session_state.theme_name == tname
+        with t_cols[ti]:
+            if st.button(tname, key=f"theme_{ti}",
+                         use_container_width=True,
+                         type="primary" if is_active else "secondary"):
+                st.session_state.theme_name = tname
+                st.rerun()
 
 # ─────────────────────────────────────────────────────────────────────
 # СТЪПКОВ ИНДИКАТОР
@@ -586,10 +579,20 @@ col_map, col_ortho, col_chat = st.columns([1.1, 1, 1.4], gap="medium")
 # ══ КОЛОНА 1: КАРТА ══════════════════════════════════════════════════
 with col_map:
     st.markdown('<div class="geo-card-header">📍 ИЗБОР НА ЗОНА</div>', unsafe_allow_html=True)
-    buf_key = st.radio("Обхват:", list(BUFFER_OPTIONS.keys()),
-                       index=list(BUFFER_OPTIONS.keys()).index(st.session_state.buf_key),
-                       horizontal=True, label_visibility="collapsed")
-    st.session_state.buf_key = buf_key
+    buf_cols = st.columns(len(BUFFER_OPTIONS))
+    for bi, bname in enumerate(BUFFER_OPTIONS.keys()):
+        is_active = st.session_state.buf_key == bname
+        with buf_cols[bi]:
+            if st.button(bname, key=f"buf_{bi}",
+                         use_container_width=True,
+                         type="primary" if is_active else "secondary"):
+                st.session_state.buf_key = bname
+                if st.session_state.ortho_img is not None:
+                    st.session_state.ortho_img = None
+                    st.session_state.ortho_b64 = None
+                    st.session_state.messages  = []
+                st.rerun()
+    buf_key = st.session_state.buf_key
     buf_deg = BUFFER_OPTIONS[buf_key]
 
     if has_pin:
@@ -684,12 +687,12 @@ with col_ortho:
                 b64_html = base64.b64encode(html_report.encode()).decode()
                 st.markdown(f"""
                 <a href="data:text/html;base64,{b64_html}"
-                   download="geo_analiz_{st.session_state.pin_lat:.4f}_{st.session_state.pin_lon:.4f}.html"
+                   target="_blank"
                    style="display:block;text-align:center;padding:10px;
                           background:var(--accent);color:var(--bg-primary);
                           border-radius:8px;font-weight:700;font-size:13px;
                           text-decoration:none;margin-top:8px;">
-                    ⬇️ Изтегли HTML отчет
+                    🖨️ Отвори отчет в нов прозорец
                 </a>""", unsafe_allow_html=True)
         else:
             st.markdown("""<div style="text-align:center;padding:10px;color:var(--text-muted);
