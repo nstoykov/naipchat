@@ -343,8 +343,32 @@ def render_chart(chart_data: dict, theme_name: str):
         df = pd.DataFrame({"Стойност": chart_data["values"]}, index=chart_data["labels"])
         st.bar_chart(df)
 
+def chart_to_png_b64(chart_data: dict) -> str:
+    """Конвертира chart_data в base64 PNG за вграждане в HTML."""
+    try:
+        import plotly.graph_objects as go
+        colors = ["#0077cc","#00b894","#fdcb6e","#e17055","#a29bfe","#fd79a8","#55efc4"]
+        fig = go.Figure(go.Pie(
+            labels=chart_data["labels"],
+            values=chart_data["values"],
+            hole=0.4,
+            marker_colors=colors[:len(chart_data["values"])],
+            textfont=dict(size=13, color="#1a2332"),
+        ))
+        fig.update_layout(
+            title=dict(text=chart_data.get("title",""), font=dict(color="#1a2332", size=15)),
+            paper_bgcolor="white", plot_bgcolor="white",
+            legend=dict(font=dict(color="#1a2332", size=12)),
+            margin=dict(t=60, b=20, l=20, r=20),
+            height=320, width=480,
+        )
+        png_bytes = fig.to_image(format="png", scale=2)
+        return base64.b64encode(png_bytes).decode()
+    except Exception:
+        return ""
+
 def generate_print_report(ortho_img, messages, pin_lat, pin_lon, buf_key, model_name):
-    """Генерира HTML отчет за печат."""
+    """Генерира HTML отчет за печат с вградени диаграми."""
     ortho_b64 = img_to_b64(ortho_img) if ortho_img else ""
     chat_html = ""
     for msg in messages:
@@ -352,12 +376,26 @@ def generate_print_report(ortho_img, messages, pin_lat, pin_lon, buf_key, model_
         role_lbl = "ВЪПРОС" if msg["role"] == "user" else "AI АНАЛИЗ"
         role_col = "#4a5a6e" if msg["role"] == "user" else "#0077cc"
         text     = clean_text(msg["content"]).replace("\n", "<br>")
+        # Диаграма ако има chart данни
+        chart_html_block = ""
+        if msg["role"] == "assistant":
+            cd = parse_chart_data(msg["content"])
+            if cd:
+                chart_b64 = chart_to_png_b64(cd)
+                if chart_b64:
+                    chart_html_block = f"""
+                    <div style=\"margin-top:14px;text-align:center;\">
+                        <img src=\"data:image/png;base64,{chart_b64}\"
+                             style=\"max-width:480px;width:100%;border-radius:8px;
+                                    border:1px solid #d0dae8;\">
+                    </div>"""
         chat_html += f"""
         <div style="margin-bottom:16px; padding:14px; background:{role_bg};
             border-radius:8px; border-left:3px solid {role_col};">
             <div style="font-size:10px; font-weight:700; color:{role_col};
                 letter-spacing:1px; margin-bottom:6px; font-family:monospace;">{role_lbl}</div>
             <div style="font-size:13px; line-height:1.7; color:#1a2332;">{text}</div>
+            {chart_html_block}
         </div>"""
     from datetime import datetime
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
